@@ -1,4 +1,4 @@
-# NosTX - MVP Plataforma de Postagens Simultâneas
+# PostBridge - MVP Plataforma de Postagens Simultâneas
 
 API REST em Node.js/TypeScript que permite agendar e publicar simultaneamente o mesmo conteúdo no X (antigo Twitter) e na rede Nostr.
 
@@ -23,7 +23,7 @@ API REST em Node.js/TypeScript que permite agendar e publicar simultaneamente o 
 1. **Clone o repositório:**
 ```bash
 git clone <repository-url>
-cd nostx
+cd postbridge
 ```
 
 2. **Instale as dependências:**
@@ -102,7 +102,7 @@ Authorization: Bearer <jwt-token>
 POST /posts
 Authorization: Bearer <jwt-token>
 {
-  "content": "Meu primeiro post simultâneo! #NosTX",
+  "content": "Meu primeiro post simultâneo! #postbridge",
   "mediaUrls": ["https://exemplo.com/imagem.jpg"] // opcional
 }
 
@@ -144,48 +144,6 @@ src/
 - **HTTPS**: Use HTTPS em produção
 - **Helmet**: Headers de segurança configurados
 - **CORS**: Configurado para controle de acesso
-
-## 🌐 Deploy
-
-### VPS Tradicional
-
-1. **Configure o servidor:**
-```bash
-# Ubuntu/Debian
-sudo apt update
-sudo apt install nodejs npm nginx
-
-# Clone e configure o projeto
-git clone <repository-url>
-cd nostx
-npm install
-npm run build
-```
-
-2. **Configure o Nginx (opcional):**
-```nginx
-server {
-    listen 80;
-    server_name seu-dominio.com;
-    
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-3. **Configure PM2 para produção:**
-```bash
-npm install -g pm2
-pm2 start dist/index.js --name nostx
-pm2 startup
-pm2 save
-```
 
 ## 🧪 Testando a API
 

@@ -13,6 +13,7 @@ import helmet from 'helmet';
 // Importa as rotas
 import authRoutes from './routes/auth';
 import postRoutes from './routes/posts';
+import twitterService from './services/twitter';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,27 +46,29 @@ app.get('/health', (req, res) => {
 // Rota raiz com documentação básica
 app.get('/', (req, res) => {
   res.json({
-    name: 'NosTX API',
-    description: 'MVP - Plataforma de Postagens Simultâneas em X e Nostr',
+    name: 'PostBridge API',
     version: '1.0.0',
+    description: 'Plataforma de Postagens Simultâneas em X (Twitter) e Nostr',
     endpoints: {
+      health: 'GET /',
       auth: {
-        'GET /auth/twitter/login': 'Inicia autenticação com Twitter',
-        'GET /auth/twitter/callback': 'Callback do Twitter OAuth',
-        'POST /auth/nostr/login': 'Autenticação com Nostr',
-        'POST /auth/nostr/add': 'Adiciona Nostr a usuário existente',
-        'GET /auth/nostr/generate-key': 'Gera nova chave Nostr'
+        twitter: {
+          login: 'GET /auth/twitter/login',
+          callback: 'GET /auth/twitter/callback'
+        },
+        nostr: {
+          generateKey: 'GET /auth/nostr/generate-key',
+          login: 'POST /auth/nostr/login',
+          add: 'POST /auth/nostr/add'
+        }
       },
       posts: {
-        'POST /posts': 'Cria e publica post simultaneamente',
-        'GET /posts/:postId': 'Busca post por ID',
-        'GET /posts/:postId/logs': 'Busca logs de publicação'
-      },
-      health: {
-        'GET /health': 'Health check da API'
+        create: 'POST /posts',
+        getById: 'GET /posts/:id',
+        getLogs: 'GET /posts/:id/logs'
       }
     },
-    authentication: 'Bearer token (JWT) no header Authorization'
+    documentation: 'Consulte o README e a collection do Postman para mais detalhes'
   });
 });
 
@@ -85,8 +88,9 @@ app.use('*', (req, res) => {
 
 // Inicia o servidor
 app.listen(PORT, () => {
-  console.log(`🚀 NosTX API rodando na porta ${PORT}`);
-  console.log(`📖 Documentação disponível em http://localhost:${PORT}`);
+  console.log(`🚀 PostBridge API rodando na porta ${PORT}`);
+  console.log(`📖 Documentação: http://localhost:${PORT}/`);
+  console.log(`🔐 Twitter OAuth: ${twitterService.isTwitterConfigured() ? '✅ Configurado' : '❌ Não configurado'}`);
   console.log(`🏥 Health check em http://localhost:${PORT}/health`);
 });
 

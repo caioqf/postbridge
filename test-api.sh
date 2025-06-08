@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🧪 Testando a API NosTX..."
+echo "🧪 Testando a API postbridge..."
 echo ""
 
 # Aguarda o servidor iniciar
@@ -33,7 +33,7 @@ echo "4️⃣ Publicando post..."
 POST_RESPONSE=$(curl -s -X POST http://localhost:3000/posts \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"content":"🎉 Primeiro post usando a API NosTX! Publicando simultaneamente no Nostr! #NosTX #MVP"}')
+  -d '{"content":"🎉 Primeiro post usando a API postbridge! Publicando simultaneamente no Nostr! #postbridge #MVP"}')
 echo $POST_RESPONSE | jq '.'
 POST_ID=$(echo $POST_RESPONSE | jq -r '.postId')
 echo ""
