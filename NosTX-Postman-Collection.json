@@ -1,0 +1,327 @@
+{
+  "info": {
+    "name": "NosTX API",
+    "description": "MVP - Plataforma de Postagens Simultâneas em X e Nostr\n\nEsta collection contém todos os endpoints da API NosTX para autenticação e publicação simultânea em X (Twitter) e Nostr.\n\n**Configuração inicial:**\n1. Configure as variáveis de ambiente\n2. Execute a autenticação (Twitter ou Nostr)\n3. Use o token JWT retornado nas requisições protegidas\n\n**Variáveis necessárias:**\n- `base_url`: URL base da API (ex: http://localhost:3000)\n- `jwt_token`: Token JWT obtido após autenticação",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "nostx-api-collection",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Verifica o status da API e obtém informações básicas sobre o serviço."
+          },
+          "response": []
+        },
+        {
+          "name": "API Documentation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            },
+            "description": "Obtém a documentação básica da API com todos os endpoints disponíveis."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints para verificar o status da API e obter documentação."
+    },
+    {
+      "name": "Autenticação",
+      "item": [
+        {
+          "name": "Twitter/X",
+          "item": [
+            {
+              "name": "Iniciar Login Twitter",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/auth/twitter/login",
+                  "host": ["{{base_url}}"],
+                  "path": ["auth", "twitter", "login"]
+                },
+                "description": "Inicia o fluxo de autenticação OAuth 1.0a com Twitter/X. Retorna a URL de autorização e um sessionId."
+              },
+              "response": []
+            },
+            {
+              "name": "Callback Twitter",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/auth/twitter/callback?oauth_token=OAUTH_TOKEN&oauth_verifier=OAUTH_VERIFIER&state=SESSION_ID",
+                  "host": ["{{base_url}}"],
+                  "path": ["auth", "twitter", "callback"],
+                  "query": [
+                    {
+                      "key": "oauth_token",
+                      "value": "OAUTH_TOKEN",
+                      "description": "Token OAuth retornado pelo Twitter"
+                    },
+                    {
+                      "key": "oauth_verifier",
+                      "value": "OAUTH_VERIFIER",
+                      "description": "Verificador OAuth retornado pelo Twitter"
+                    },
+                    {
+                      "key": "state",
+                      "value": "SESSION_ID",
+                      "description": "Session ID retornado no login inicial"
+                    }
+                  ]
+                },
+                "description": "Callback automático do Twitter OAuth. Normalmente chamado automaticamente pelo Twitter após autorização."
+              },
+              "response": []
+            }
+          ],
+          "description": "Endpoints para autenticação com Twitter/X usando OAuth 1.0a."
+        },
+        {
+          "name": "Nostr",
+          "item": [
+            {
+              "name": "Gerar Chave Nostr",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/auth/nostr/generate-key",
+                  "host": ["{{base_url}}"],
+                  "path": ["auth", "nostr", "generate-key"]
+                },
+                "description": "Gera uma nova chave privada e pública para Nostr. Use a chave privada para fazer login."
+              },
+              "response": []
+            },
+            {
+              "name": "Login com Nostr",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"privateKey\": \"sua-chave-privada-hex-aqui\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/nostr/login",
+                  "host": ["{{base_url}}"],
+                  "path": ["auth", "nostr", "login"]
+                },
+                "description": "Faz login usando uma chave privada Nostr existente. Retorna um token JWT para autenticação."
+              },
+              "response": []
+            },
+            {
+              "name": "Adicionar Nostr a Usuário",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"privateKey\": \"sua-chave-privada-hex-aqui\"\n}"
+                },
+                "url": {
+                  "raw": "{{base_url}}/auth/nostr/add",
+                  "host": ["{{base_url}}"],
+                  "path": ["auth", "nostr", "add"]
+                },
+                "description": "Adiciona autenticação Nostr a um usuário já existente (que fez login com Twitter). Requer autenticação JWT."
+              },
+              "response": []
+            }
+          ],
+          "description": "Endpoints para autenticação com Nostr usando chaves privadas."
+        }
+      ],
+      "description": "Endpoints de autenticação para Twitter/X e Nostr. Após a autenticação, use o token JWT retornado nas requisições protegidas."
+    },
+    {
+      "name": "Posts",
+      "item": [
+        {
+          "name": "Criar e Publicar Post",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Meu primeiro post simultâneo no X e Nostr! 🚀 #NosTX\",\n  \"mediaUrls\": [\n    \"https://exemplo.com/imagem1.jpg\",\n    \"https://exemplo.com/imagem2.png\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/posts",
+              "host": ["{{base_url}}"],
+              "path": ["posts"]
+            },
+            "description": "Cria e publica um post simultaneamente no X (Twitter) e Nostr. O conteúdo deve ter no máximo 280 caracteres e pode incluir até 4 URLs de mídia."
+          },
+          "response": []
+        },
+        {
+          "name": "Criar Post Simples (Apenas Texto)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Olá mundo! Testando a API NosTX 👋\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/posts",
+              "host": ["{{base_url}}"],
+              "path": ["posts"]
+            },
+            "description": "Exemplo de post simples apenas com texto, sem mídias."
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar Post por ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/posts/{{post_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["posts", "{{post_id}}"]
+            },
+            "description": "Busca um post específico pelo seu ID. Apenas o autor do post pode acessá-lo."
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar Logs de Publicação",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/posts/{{post_id}}/logs",
+              "host": ["{{base_url}}"],
+              "path": ["posts", "{{post_id}}", "logs"]
+            },
+            "description": "Busca os logs detalhados de publicação de um post específico, incluindo status de sucesso/erro para cada plataforma."
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints para criação, publicação e consulta de posts. Todos os endpoints requerem autenticação JWT."
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "description": "URL base da API NosTX"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "description": "Token JWT obtido após autenticação (Twitter ou Nostr)"
+    },
+    {
+      "key": "post_id",
+      "value": "",
+      "description": "ID de um post específico para consultas"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Script executado antes de cada requisição",
+          "// Você pode adicionar lógica personalizada aqui se necessário"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Testes automáticos após cada requisição",
+          "pm.test(\"Status code is not 500\", function () {",
+          "    pm.expect(pm.response.code).to.not.equal(500);",
+          "});",
+          "",
+          "// Salva automaticamente o JWT token se retornado",
+          "if (pm.response.json() && pm.response.json().token) {",
+          "    pm.collectionVariables.set(\"jwt_token\", pm.response.json().token);",
+          "    console.log(\"JWT token salvo automaticamente!\");",
+          "}",
+          "",
+          "// Salva automaticamente o post ID se retornado",
+          "if (pm.response.json() && pm.response.json().postId) {",
+          "    pm.collectionVariables.set(\"post_id\", pm.response.json().postId);",
+          "    console.log(\"Post ID salvo automaticamente!\");",
+          "}"
+        ]
+      }
+    }
+  ]
+} 
