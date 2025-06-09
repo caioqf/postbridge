@@ -25,7 +25,6 @@ class TwitterService {
     }
   }
 
-  // Inicia o fluxo OAuth 1.0a
   async getAuthUrl(): Promise<{ url: string; oauthToken: string; oauthTokenSecret: string }> {
     this.checkConfiguration();
     
@@ -43,7 +42,6 @@ class TwitterService {
     };
   }
 
-  // Troca o verifier por tokens de acesso
   async getAccessTokens(
     oauthToken: string,
     oauthTokenSecret: string,
@@ -66,7 +64,6 @@ class TwitterService {
     };
   }
 
-  // Publica um tweet
   async publishTweet(
     accessToken: string,
     accessSecret: string,
@@ -83,8 +80,6 @@ class TwitterService {
         accessSecret,
       });
 
-      // Por simplicidade do MVP, vamos apenas publicar texto
-      // Em uma versão futura, podemos adicionar suporte a mídias
       const tweet = await client.v2.tweet(content);
       
       return {
@@ -99,7 +94,6 @@ class TwitterService {
     }
   }
 
-  // Verifica se os tokens são válidos
   async verifyCredentials(accessToken: string, accessSecret: string): Promise<boolean> {
     try {
       this.checkConfiguration();
@@ -118,7 +112,6 @@ class TwitterService {
     }
   }
 
-  // Verifica se o serviço está configurado
   isTwitterConfigured(): boolean {
     return this.isConfigured;
   }

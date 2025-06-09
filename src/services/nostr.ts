@@ -67,7 +67,6 @@ class NostrService {
     }
   }
 
-  // Publica uma nota no Nostr
   async publishNote(
     privateKey: string,
     content: string,
@@ -76,7 +75,6 @@ class NostrService {
     try {
       const normalizedKey = this.normalizePrivateKey(privateKey);
       
-      // Cria o evento
       const event: EventTemplate = {
         kind: 1, // Text note
         created_at: Math.floor(Date.now() / 1000),
@@ -94,7 +92,6 @@ class NostrService {
       // Assina o evento
       const signedEvent = finishEvent(event, normalizedKey);
 
-      // Publica nos relays
       const publishPromises = this.relays.map(relay => 
         this.pool.publish([relay], signedEvent)
       );

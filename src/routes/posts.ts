@@ -1,94 +1,82 @@
 import { Router, Response } from 'express';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { publishPost, getPost, getPublicationLogs } from '../services/publisher';
 import database from '../database';
-import { CreatePostRequest } from '../types';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-// Criar e publicar post
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const { content, mediaUrls }: CreatePostRequest = req.body;
-    const userId = req.userId!;
-
+    const { content, mediaUrls } = req.body;
+    
     if (!content || content.trim().length === 0) {
-      return res.status(400).json({ error: 'Content is required' });
+      return res.status(400).json({ error: 'Conteúdo é obrigatório' });
     }
-
-    // Validações básicas
+    
     if (content.length > 280) {
-      return res.status(400).json({ error: 'Content exceeds 280 characters' });
+      return res.status(400).json({ error: 'Conteúdo deve ter no máximo 280 caracteres' });
     }
-
-    if (mediaUrls && mediaUrls.length > 4) {
-      return res.status(400).json({ error: 'Maximum 4 media URLs allowed' });
+    
+    if (mediaUrls && (!Array.isArray(mediaUrls) || mediaUrls.some((url: any) => typeof url !== 'string'))) {
+      return res.status(400).json({ error: 'URLs de mídia devem ser um array de strings' });
     }
-
-    // Busca o usuário
-    const user = await database.getUserById(userId);
+    
+    const user = await database.getUserById(req.userId!);
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'Usuário não encontrado' });
     }
-
-    // Publica o post
+    
     const result = await publishPost(user, content, mediaUrls);
-
+    
     res.json({
       success: true,
       postId: result.postId,
       results: result.results
     });
+    
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Erro ao criar post:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
-// Buscar post por ID
-router.get('/:postId', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const { postId } = req.params;
-    const userId = req.userId!;
-
-    const post = await getPost(postId);
+    const { id } = req.params;
+    
+    const post = await getPost(id);
     
     if (!post) {
-      return res.status(404).json({ error: 'Post not found' });
+      return res.status(404).json({ error: 'Post não encontrado' });
     }
-
-    // Verifica se o post pertence ao usuário
-    if (post.userId !== userId) {
-      return res.status(403).json({ error: 'Access denied' });
+    
+    if (post.userId !== req.userId) {
+      return res.status(403).json({ error: 'Acesso negado' });
     }
-
+    
     res.json(post);
+    
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Erro ao buscar post:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
-// Buscar logs de publicação
-router.get('/:postId/logs', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.get('/:id/logs', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const { postId } = req.params;
-    const userId = req.userId!;
-
-    // Verifica se o post existe e pertence ao usuário
-    const post = await getPost(postId);
+    const { id } = req.params;
     
-    if (!post) {
-      return res.status(404).json({ error: 'Post not found' });
+    const post = await getPost(id);
+    if (!post || post.userId !== req.userId) {
+      return res.status(404).json({ error: 'Post não encontrado' });
     }
-
-    if (post.userId !== userId) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    const logs = await getPublicationLogs(postId);
-
+    
+    const logs = await getPublicationLogs(id);
     res.json(logs);
+    
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Erro ao buscar logs:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
