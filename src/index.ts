@@ -50,16 +50,19 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     description: 'Plataforma de Postagens Simultâneas em X (Twitter) e Nostr',
     endpoints: {
-      health: 'GET /',
+      health: 'GET /health',
       auth: {
-        twitter: {
-          login: 'GET /auth/twitter/login',
-          callback: 'GET /auth/twitter/callback'
+        postbridge: {
+          register: 'POST /auth/register',
+          login: 'POST /auth/login',
+          status: 'GET /auth/status'
         },
-        nostr: {
-          generateKey: 'GET /auth/nostr/generate-key',
-          login: 'POST /auth/nostr/login',
-          add: 'POST /auth/nostr/add'
+        connect: {
+          x: 'POST /auth/connect/x',
+          nostr: 'POST /auth/connect/nostr'
+        },
+        utils: {
+          generateNostrKey: 'GET /auth/nostr/generate-key'
         }
       },
       posts: {
@@ -67,6 +70,11 @@ app.get('/', (req, res) => {
         getById: 'GET /posts/:id',
         getLogs: 'GET /posts/:id/logs'
       }
+    },
+    flow: {
+      '1': 'Register/Login to PostBridge',
+      '2': 'Connect your social platforms (X and/or Nostr)',
+      '3': 'Publish simultaneously to connected platforms'
     },
     documentation: 'Consulte o README e a collection do Postman para mais detalhes'
   });

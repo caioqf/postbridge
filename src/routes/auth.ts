@@ -4,157 +4,41 @@ import database from '../database';
 import twitterService from '../services/twitter';
 import nostrService from '../services/nostr';
 import { generateToken, authenticateToken, AuthRequest } from '../middleware/auth';
-import { encrypt } from '../utils/crypto';
+import { encrypt, decrypt } from '../utils/crypto';
 import { User, NostrAuthRequest } from '../types';
+import bcrypt from 'bcrypt';
 
 const router = Router();
 
 // Armazena temporariamente os tokens OAuth do Twitter
-const tempTwitterTokens = new Map<string, { oauthToken: string; oauthTokenSecret: string }>();
+const tempTwitterTokens = new Map<string, { oauthToken: string; oauthTokenSecret: string; userId?: string }>();
 
-// Inicia autenticação com Twitter
-router.get('/twitter/login', async (req: Request, res: Response) => {
+// Registro no PostBridge
+router.post('/register', async (req: Request, res: Response) => {
   try {
-    console.log('🔍 Iniciando autenticação Twitter...');
-    console.log('📋 Configurações:', {
-      hasConsumerKey: !!process.env.TWITTER_CONSUMER_KEY,
-      hasConsumerSecret: !!process.env.TWITTER_CONSUMER_SECRET,
-      callbackUrl: process.env.TWITTER_CALLBACK_URL,
-      isConfigured: twitterService.isTwitterConfigured()
-    });
+    const { email, password, name } = req.body;
 
-    if (!twitterService.isTwitterConfigured()) {
-      console.log('❌ Twitter não configurado');
-      return res.status(400).json({ 
-        error: 'Twitter API credentials not configured',
-        details: 'Check TWITTER_CONSUMER_KEY and TWITTER_CONSUMER_SECRET in .env'
-      });
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const { url, oauthToken, oauthTokenSecret } = await twitterService.getAuthUrl();
-    
-    // Armazena temporariamente os tokens usando oauth_token como chave
-    tempTwitterTokens.set(oauthToken, { oauthToken, oauthTokenSecret });
-    
-    // Remove após 10 minutos
-    setTimeout(() => {
-      tempTwitterTokens.delete(oauthToken);
-    }, 10 * 60 * 1000);
-
-    console.log('✅ URL de autorização gerada:', url);
-    console.log('🔑 OAuth token armazenado:', oauthToken);
-
-    res.json({
-      authUrl: url,
-      sessionId: oauthToken // Retorna o oauth_token como sessionId para referência
-    });
-  } catch (error: any) {
-    console.error('❌ Erro na autenticação Twitter:', {
-      message: error.message,
-      code: error.code,
-      data: error.data,
-      stack: error.stack
-    });
-    res.status(500).json({ 
-      error: error.message,
-      details: process.env.NODE_ENV === 'development' ? error.data : undefined
-    });
-  }
-});
-
-// Callback do Twitter OAuth
-router.get('/twitter/callback', async (req: Request, res: Response) => {
-  try {
-    console.log('🔄 Callback Twitter recebido:', req.query);
-    
-    const { oauth_token, oauth_verifier } = req.query;
-    
-    if (!oauth_token || !oauth_verifier) {
-      console.log('❌ Parâmetros OAuth ausentes:', { oauth_token, oauth_verifier });
-      return res.status(400).json({ error: 'Missing OAuth parameters' });
+    // Verifica se usuário já existe
+    const existingUser = await database.getUserByEmail(email);
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists with this email' });
     }
 
-    // Busca os tokens temporários usando oauth_token
-    const tempTokens = tempTwitterTokens.get(oauth_token as string);
-    
-    if (!tempTokens) {
-      console.log('❌ Sessão não encontrada para oauth_token:', oauth_token);
-      console.log('🗂️ Tokens disponíveis:', Array.from(tempTwitterTokens.keys()));
-      return res.status(400).json({ 
-        error: 'Invalid or expired session',
-        details: `OAuth token ${oauth_token} not found in temporary storage`
-      });
-    }
-
-    console.log('✅ Tokens temporários encontrados, trocando por access tokens...');
-
-    // Troca por tokens de acesso
-    const { accessToken, accessSecret } = await twitterService.getAccessTokens(
-      tempTokens.oauthToken,
-      tempTokens.oauthTokenSecret,
-      oauth_verifier as string
-    );
-
-    console.log('✅ Access tokens obtidos com sucesso');
-
-    // Cria ou atualiza usuário
-    const userId = randomUUID();
-    const user: User = {
-      id: userId,
-      createdAt: new Date(),
-      twitterAccessToken: encrypt(accessToken),
-      twitterAccessSecret: encrypt(accessSecret)
-    };
-
-    await database.createUser(user);
-    console.log('✅ Usuário criado:', userId);
-
-    // Limpa tokens temporários
-    tempTwitterTokens.delete(oauth_token as string);
-
-    // Gera JWT
-    const token = generateToken(userId);
-
-    res.json({
-      success: true,
-      token,
-      userId,
-      message: 'Twitter authentication successful! You can now use this token to make authenticated requests.'
-    });
-  } catch (error: any) {
-    console.error('❌ Erro no callback Twitter:', {
-      message: error.message,
-      code: error.code,
-      data: error.data,
-      stack: error.stack
-    });
-    res.status(500).json({ 
-      error: error.message,
-      details: process.env.NODE_ENV === 'development' ? error.data : undefined
-    });
-  }
-});
-
-// Autenticação com Nostr
-router.post('/nostr/login', async (req: Request, res: Response) => {
-  try {
-    const { privateKey }: NostrAuthRequest = req.body;
-
-    if (!privateKey) {
-      return res.status(400).json({ error: 'Private key is required' });
-    }
-
-    // Valida a chave privada
-    if (!nostrService.isValidPrivateKey(privateKey)) {
-      return res.status(400).json({ error: 'Invalid private key' });
-    }
+    // Hash da senha
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Cria usuário
     const userId = randomUUID();
     const user: User = {
       id: userId,
-      createdAt: new Date(),
-      nostrPrivateKey: encrypt(privateKey)
+      email,
+      name: name || email.split('@')[0],
+      password: hashedPassword,
+      createdAt: new Date()
     };
 
     await database.createUser(user);
@@ -166,15 +50,64 @@ router.post('/nostr/login', async (req: Request, res: Response) => {
       success: true,
       token,
       userId,
-      publicKey: nostrService.getPublicKey(privateKey)
+      user: {
+        id: userId,
+        email,
+        name: user.name
+      },
+      message: 'Account created successfully! You can now connect your social platforms.'
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Adiciona autenticação Nostr a usuário existente
-router.post('/nostr/add', authenticateToken, async (req: AuthRequest, res: Response) => {
+// Login no PostBridge
+router.post('/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Busca usuário
+    const user = await database.getUserByEmail(email);
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Verifica senha
+    const isValidPassword = await bcrypt.compare(password, user.password!);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Gera JWT
+    const token = generateToken(user.id);
+
+    res.json({
+      success: true,
+      token,
+      userId: user.id,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        connectedPlatforms: {
+          x: !!(user.twitterAccessToken && user.twitterAccessSecret),
+          nostr: !!user.nostrPrivateKey
+        }
+      },
+      message: 'Login successful!'
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Conectar Nostr à conta existente
+router.post('/connect/nostr', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { privateKey }: NostrAuthRequest = req.body;
     const userId = req.userId!;
@@ -193,7 +126,142 @@ router.post('/nostr/add', authenticateToken, async (req: AuthRequest, res: Respo
 
     res.json({
       success: true,
-      publicKey: nostrService.getPublicKey(privateKey)
+      publicKey: nostrService.getPublicKey(privateKey),
+      message: 'Nostr account connected successfully!'
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Conectar X à conta existente
+router.post('/connect/x', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+
+    if (!twitterService.isTwitterConfigured()) {
+      return res.status(400).json({ 
+        error: 'X API credentials not configured',
+        details: 'Check TWITTER_CONSUMER_KEY and TWITTER_CONSUMER_SECRET in .env'
+      });
+    }
+
+    const { url, oauthToken, oauthTokenSecret } = await twitterService.getAuthUrl();
+    
+    // Armazena temporariamente os tokens com referência ao userId
+    tempTwitterTokens.set(oauthToken, { 
+      oauthToken, 
+      oauthTokenSecret,
+      userId
+    });
+    
+    // Remove após 10 minutos
+    setTimeout(() => {
+      tempTwitterTokens.delete(oauthToken);
+    }, 10 * 60 * 1000);
+
+    res.json({
+      authUrl: url,
+      sessionId: oauthToken,
+      message: 'Complete the X authorization to connect your account'
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Callback do X OAuth (atualiza usuário existente)
+router.get('/x/callback', async (req: Request, res: Response) => {
+  try {
+    console.log('🔄 Callback X recebido:', req.query);
+    
+    const { oauth_token, oauth_verifier } = req.query;
+    
+    if (!oauth_token || !oauth_verifier) {
+      console.log('❌ Parâmetros OAuth ausentes:', { oauth_token, oauth_verifier });
+      return res.status(400).json({ error: 'Missing OAuth parameters' });
+    }
+
+    // Busca os tokens temporários usando oauth_token
+    const tempTokens = tempTwitterTokens.get(oauth_token as string);
+    
+    if (!tempTokens) {
+      console.log('❌ Sessão não encontrada para oauth_token:', oauth_token);
+      return res.status(400).json({ 
+        error: 'Invalid or expired session',
+        details: `OAuth token ${oauth_token} not found in temporary storage`
+      });
+    }
+
+    console.log('✅ Tokens temporários encontrados, trocando por access tokens...');
+
+    // Troca por tokens de acesso
+    const { accessToken, accessSecret } = await twitterService.getAccessTokens(
+      tempTokens.oauthToken,
+      tempTokens.oauthTokenSecret,
+      oauth_verifier as string
+    );
+
+    console.log('✅ Access tokens obtidos com sucesso');
+
+    // Atualiza usuário existente
+    if (tempTokens.userId) {
+      await database.updateUserTwitterTokens(
+        tempTokens.userId,
+        encrypt(accessToken),
+        encrypt(accessSecret)
+      );
+      console.log('✅ X conectado ao usuário existente:', tempTokens.userId);
+    }
+
+    // Limpa tokens temporários
+    tempTwitterTokens.delete(oauth_token as string);
+
+    res.json({
+      success: true,
+      message: 'X account connected successfully! You can now close this window.',
+      connectedPlatform: 'x'
+    });
+  } catch (error: any) {
+    console.error('❌ Erro no callback X:', error);
+    res.status(500).json({ 
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.data : undefined
+    });
+  }
+});
+
+// Status das conexões do usuário
+router.get('/status', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const user = await database.getUserById(userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    let nostrPublicKey = null;
+    if (user.nostrPrivateKey) {
+      try {
+        const decryptedPrivateKey = decrypt(user.nostrPrivateKey);
+        nostrPublicKey = nostrService.getPublicKey(decryptedPrivateKey);
+      } catch (error) {
+        console.error('Error decrypting Nostr key:', error);
+      }
+    }
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      },
+      connectedPlatforms: {
+        x: !!(user.twitterAccessToken && user.twitterAccessSecret),
+        nostr: !!user.nostrPrivateKey
+      },
+      nostrPublicKey
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

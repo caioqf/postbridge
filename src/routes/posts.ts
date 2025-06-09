@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
-import publisherService from '../services/publisher';
+import { publishPost, getPost, getPublicationLogs } from '../services/publisher';
+import database from '../database';
 import { CreatePostRequest } from '../types';
 
 const router = Router();
@@ -24,8 +25,14 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Maximum 4 media URLs allowed' });
     }
 
+    // Busca o usuário
+    const user = await database.getUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     // Publica o post
-    const result = await publisherService.publishPost(userId, content, mediaUrls);
+    const result = await publishPost(user, content, mediaUrls);
 
     res.json({
       success: true,
@@ -43,7 +50,7 @@ router.get('/:postId', authenticateToken, async (req: AuthRequest, res: Response
     const { postId } = req.params;
     const userId = req.userId!;
 
-    const post = await publisherService.getPost(postId);
+    const post = await getPost(postId);
     
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
@@ -67,7 +74,7 @@ router.get('/:postId/logs', authenticateToken, async (req: AuthRequest, res: Res
     const userId = req.userId!;
 
     // Verifica se o post existe e pertence ao usuário
-    const post = await publisherService.getPost(postId);
+    const post = await getPost(postId);
     
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
@@ -77,7 +84,7 @@ router.get('/:postId/logs', authenticateToken, async (req: AuthRequest, res: Res
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    const logs = await publisherService.getPublicationLogs(postId);
+    const logs = await getPublicationLogs(postId);
 
     res.json(logs);
   } catch (error: any) {

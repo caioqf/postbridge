@@ -17,6 +17,9 @@ class Database {
       this.db.run(`
         CREATE TABLE IF NOT EXISTS users (
           id TEXT PRIMARY KEY,
+          email TEXT UNIQUE,
+          name TEXT,
+          password TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           twitter_access_token TEXT,
           twitter_access_secret TEXT,
@@ -58,12 +61,15 @@ class Database {
   createUser(user: User): Promise<void> {
     return new Promise((resolve, reject) => {
       const stmt = this.db.prepare(`
-        INSERT INTO users (id, twitter_access_token, twitter_access_secret, nostr_private_key)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO users (id, email, name, password, twitter_access_token, twitter_access_secret, nostr_private_key)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
       stmt.run([
         user.id,
+        user.email || null,
+        user.name || null,
+        user.password || null,
         user.twitterAccessToken || null,
         user.twitterAccessSecret || null,
         user.nostrPrivateKey || null
@@ -87,6 +93,34 @@ class Database {
           else {
             resolve({
               id: row.id,
+              email: row.email,
+              name: row.name,
+              password: row.password,
+              createdAt: new Date(row.created_at),
+              twitterAccessToken: row.twitter_access_token,
+              twitterAccessSecret: row.twitter_access_secret,
+              nostrPrivateKey: row.nostr_private_key
+            });
+          }
+        }
+      );
+    });
+  }
+
+  getUserByEmail(email: string): Promise<User | null> {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        'SELECT * FROM users WHERE email = ?',
+        [email],
+        (err, row: any) => {
+          if (err) reject(err);
+          else if (!row) resolve(null);
+          else {
+            resolve({
+              id: row.id,
+              email: row.email,
+              name: row.name,
+              password: row.password,
               createdAt: new Date(row.created_at),
               twitterAccessToken: row.twitter_access_token,
               twitterAccessSecret: row.twitter_access_secret,

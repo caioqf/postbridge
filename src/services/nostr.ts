@@ -4,7 +4,8 @@ import {
   finishEvent, 
   SimplePool,
   Event as NostrEvent,
-  EventTemplate
+  EventTemplate,
+  nip19
 } from 'nostr-tools';
 
 class NostrService {
@@ -22,6 +23,28 @@ class NostrService {
     ];
   }
 
+  // Normaliza a chave privada (converte nsec para hex se necessário)
+  private normalizePrivateKey(privateKey: string): string {
+    // Se já está em formato hex (64 caracteres), retorna como está
+    if (/^[0-9a-fA-F]{64}$/.test(privateKey)) {
+      return privateKey;
+    }
+
+    // Se está no formato nsec, converte para hex
+    if (privateKey.startsWith('nsec1')) {
+      try {
+        const decoded = nip19.decode(privateKey);
+        if (decoded.type === 'nsec') {
+          return decoded.data;
+        }
+      } catch (error) {
+        throw new Error('Invalid nsec format');
+      }
+    }
+
+    throw new Error('Invalid private key format. Use hex (64 chars) or nsec format');
+  }
+
   // Gera uma nova chave privada (para novos usuários)
   generatePrivateKey(): string {
     return generatePrivateKey();
@@ -29,13 +52,15 @@ class NostrService {
 
   // Obtém a chave pública a partir da privada
   getPublicKey(privateKey: string): string {
-    return getPublicKey(privateKey);
+    const normalizedKey = this.normalizePrivateKey(privateKey);
+    return getPublicKey(normalizedKey);
   }
 
   // Valida se uma chave privada é válida
   isValidPrivateKey(privateKey: string): boolean {
     try {
-      getPublicKey(privateKey);
+      const normalizedKey = this.normalizePrivateKey(privateKey);
+      getPublicKey(normalizedKey);
       return true;
     } catch {
       return false;
@@ -49,6 +74,8 @@ class NostrService {
     mediaUrls?: string[]
   ): Promise<{ success: boolean; eventId?: string; error?: string }> {
     try {
+      const normalizedKey = this.normalizePrivateKey(privateKey);
+      
       // Cria o evento
       const event: EventTemplate = {
         kind: 1, // Text note
@@ -65,7 +92,7 @@ class NostrService {
       }
 
       // Assina o evento
-      const signedEvent = finishEvent(event, privateKey);
+      const signedEvent = finishEvent(event, normalizedKey);
 
       // Publica nos relays
       const publishPromises = this.relays.map(relay => 
@@ -89,7 +116,8 @@ class NostrService {
   // Verifica se uma chave privada pode publicar (teste básico)
   async verifyPrivateKey(privateKey: string): Promise<boolean> {
     try {
-      const publicKey = getPublicKey(privateKey);
+      const normalizedKey = this.normalizePrivateKey(privateKey);
+      const publicKey = getPublicKey(normalizedKey);
       return publicKey.length === 64; // Hex string de 32 bytes
     } catch {
       return false;

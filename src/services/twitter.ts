@@ -1,5 +1,5 @@
 import { TwitterApi } from 'twitter-api-v2';
-import { TwitterAuthTokens } from '../types';
+import { XAuthTokens } from '../types';
 
 class TwitterService {
   private consumerKey: string;
@@ -48,7 +48,7 @@ class TwitterService {
     oauthToken: string,
     oauthTokenSecret: string,
     oauthVerifier: string
-  ): Promise<TwitterAuthTokens> {
+  ): Promise<XAuthTokens> {
     this.checkConfiguration();
     
     const client = new TwitterApi({

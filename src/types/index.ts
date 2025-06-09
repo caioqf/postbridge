@@ -1,5 +1,8 @@
 export interface User {
   id: string;
+  email?: string;
+  name?: string;
+  password?: string;
   createdAt: Date;
   twitterAccessToken?: string;
   twitterAccessSecret?: string;
@@ -19,7 +22,7 @@ export interface Post {
 export interface PublicationLog {
   id: string;
   postId: string;
-  platform: 'twitter' | 'nostr';
+  platform: 'x' | 'nostr';
   status: 'success' | 'failed';
   error?: string;
   publishedAt: Date;
@@ -32,7 +35,7 @@ export interface CreatePostRequest {
   scheduledAt?: string;
 }
 
-export interface TwitterAuthTokens {
+export interface XAuthTokens {
   accessToken: string;
   accessSecret: string;
 }
