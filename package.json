@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts",
+    "dev": "nodemon",
+    "dev:ts": "ts-node src/index.ts",
     "test": "jest"
   },
   "dependencies": {
@@ -44,5 +45,14 @@
     "typescript"
   ],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "nodemonConfig": {
+    "watch": ["src"],
+    "ext": "ts,js,json",
+    "ignore": ["src/**/*.test.ts", "src/**/*.spec.ts"],
+    "exec": "ts-node src/index.ts",
+    "env": {
+      "NODE_ENV": "development"
+    }
+  }
 }
