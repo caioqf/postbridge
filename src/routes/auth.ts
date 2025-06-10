@@ -174,12 +174,9 @@ router.post('/connect/x', authenticateToken, async (req: AuthRequest, res: Respo
 // Callback do X OAuth (atualiza usuário existente)
 router.get('/x/callback', async (req: Request, res: Response) => {
   try {
-    console.log('🔄 Callback X recebido:', req.query);
-    
     const { oauth_token, oauth_verifier } = req.query;
     
     if (!oauth_token || !oauth_verifier) {
-      console.log('❌ Parâmetros OAuth ausentes:', { oauth_token, oauth_verifier });
       return res.status(400).json({ error: 'Missing OAuth parameters' });
     }
 
@@ -187,14 +184,11 @@ router.get('/x/callback', async (req: Request, res: Response) => {
     const tempTokens = tempXTokens.get(oauth_token as string);
     
     if (!tempTokens) {
-      console.log('❌ Sessão não encontrada para oauth_token:', oauth_token);
       return res.status(400).json({ 
         error: 'Invalid or expired session',
         details: `OAuth token ${oauth_token} not found in temporary storage`
       });
     }
-
-    console.log('✅ Tokens temporários encontrados, trocando por access tokens...');
 
     // Troca por tokens de acesso
     const { accessToken, accessSecret } = await xService.getAccessTokens(
@@ -203,11 +197,8 @@ router.get('/x/callback', async (req: Request, res: Response) => {
       oauth_verifier as string
     );
 
-    console.log('✅ Access tokens obtidos com sucesso');
-
     // Fetch user info to get username
     const userInfo = await xService.getUserInfo(accessToken, accessSecret);
-    console.log('✅ Informações do usuário X obtidas:', userInfo?.username);
 
     // Atualiza usuário existente
     if (tempTokens.userId) {
@@ -217,7 +208,6 @@ router.get('/x/callback', async (req: Request, res: Response) => {
         encrypt(accessSecret),
         userInfo?.username
       );
-      console.log('✅ X conectado ao usuário existente:', tempTokens.userId);
     }
 
     // Limpa tokens temporários
