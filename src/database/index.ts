@@ -158,6 +158,33 @@ class Database {
     });
   }
 
+  // Disconnect platform methods
+  disconnectUserTwitter(userId: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'UPDATE users SET twitter_access_token = NULL, twitter_access_secret = NULL WHERE id = ?',
+        [userId],
+        function(err) {
+          if (err) reject(err);
+          else resolve();
+        }
+      );
+    });
+  }
+
+  disconnectUserNostr(userId: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'UPDATE users SET nostr_private_key = NULL WHERE id = ?',
+        [userId],
+        function(err) {
+          if (err) reject(err);
+          else resolve();
+        }
+      );
+    });
+  }
+
   // Post operations
   createPost(post: Post): Promise<void> {
     return new Promise((resolve, reject) => {

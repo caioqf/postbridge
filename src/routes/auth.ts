@@ -161,7 +161,7 @@ router.post('/connect/x', authenticateToken, async (req: AuthRequest, res: Respo
     }, 10 * 60 * 1000);
 
     res.json({
-      authUrl: url,
+      url,
       sessionId: oauthToken,
       message: 'Complete the X authorization to connect your account'
     });
@@ -268,15 +268,36 @@ router.get('/status', authenticateToken, async (req: AuthRequest, res: Response)
   }
 });
 
-// Gera nova chave privada Nostr
-router.get('/nostr/generate-key', (req: Request, res: Response) => {
+// Desconectar X da conta
+router.post('/disconnect/x', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const privateKey = nostrService.generatePrivateKey();
-    const publicKey = nostrService.getPublicKey(privateKey);
+    const userId = req.userId!;
+
+    // Remove os tokens do X do usuário
+    await database.disconnectUserTwitter(userId);
 
     res.json({
-      privateKey,
-      publicKey
+      success: true,
+      message: 'X account disconnected successfully!',
+      disconnectedPlatform: 'x'
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Desconectar Nostr da conta
+router.post('/disconnect/nostr', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+
+    // Remove a chave privada Nostr do usuário
+    await database.disconnectUserNostr(userId);
+
+    res.json({
+      success: true,
+      message: 'Nostr account disconnected successfully!',
+      disconnectedPlatform: 'nostr'
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

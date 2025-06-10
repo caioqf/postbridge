@@ -61,8 +61,9 @@ app.get('/', (req, res) => {
           x: 'POST /auth/connect/x',
           nostr: 'POST /auth/connect/nostr'
         },
-        utils: {
-          generateNostrKey: 'GET /auth/nostr/generate-key'
+        disconnect: {
+          x: 'POST /auth/disconnect/x',
+          nostr: 'POST /auth/disconnect/nostr'
         }
       },
       posts: {
