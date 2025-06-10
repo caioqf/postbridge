@@ -6,6 +6,7 @@ export interface User {
   createdAt: Date;
   twitterAccessToken?: string;
   twitterAccessSecret?: string;
+  twitterUsername?: string;
   nostrPrivateKey?: string;
 }
 

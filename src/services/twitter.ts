@@ -105,10 +105,32 @@ class TwitterService {
         accessSecret,
       });
 
-      await client.v2.me();
+      await client.v1.verifyCredentials();
       return true;
     } catch {
       return false;
+    }
+  }
+
+  async getUserInfo(accessToken: string, accessSecret: string): Promise<{ username: string; name: string } | null> {
+    try {
+      this.checkConfiguration();
+      
+      const client = new TwitterApi({
+        appKey: this.consumerKey,
+        appSecret: this.consumerSecret,
+        accessToken,
+        accessSecret,
+      });
+
+      const user = await client.v1.verifyCredentials();
+      return {
+        username: user.screen_name,
+        name: user.name
+      };
+    } catch (error) {
+      console.error('Error getting Twitter user info:', error);
+      return null;
     }
   }
 

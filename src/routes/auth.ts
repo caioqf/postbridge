@@ -94,6 +94,7 @@ router.post('/login', async (req: Request, res: Response) => {
         id: user.id,
         email: user.email,
         name: user.name,
+        twitterUsername: user.twitterUsername,
         connectedPlatforms: {
           x: !!(user.twitterAccessToken && user.twitterAccessSecret),
           nostr: !!user.nostrPrivateKey
@@ -204,12 +205,17 @@ router.get('/x/callback', async (req: Request, res: Response) => {
 
     console.log('✅ Access tokens obtidos com sucesso');
 
+    // Fetch user info to get username
+    const userInfo = await twitterService.getUserInfo(accessToken, accessSecret);
+    console.log('✅ Informações do usuário X obtidas:', userInfo?.username);
+
     // Atualiza usuário existente
     if (tempTokens.userId) {
       await database.updateUserTwitterTokens(
         tempTokens.userId,
         encrypt(accessToken),
-        encrypt(accessSecret)
+        encrypt(accessSecret),
+        userInfo?.username
       );
       console.log('✅ X conectado ao usuário existente:', tempTokens.userId);
     }
@@ -261,6 +267,7 @@ router.get('/status', authenticateToken, async (req: AuthRequest, res: Response)
         x: !!(user.twitterAccessToken && user.twitterAccessSecret),
         nostr: !!user.nostrPrivateKey
       },
+      twitterUsername: user.twitterUsername,
       nostrPublicKey
     });
   } catch (error: any) {

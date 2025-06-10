@@ -23,6 +23,7 @@ class Database {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           twitter_access_token TEXT,
           twitter_access_secret TEXT,
+          twitter_username TEXT,
           nostr_private_key TEXT
         )
       `);
@@ -54,6 +55,16 @@ class Database {
           FOREIGN KEY (post_id) REFERENCES posts (id)
         )
       `);
+
+      // Add twitter_username column if it doesn't exist (for existing databases)
+      this.db.run(`
+        ALTER TABLE users ADD COLUMN twitter_username TEXT
+      `, (err) => {
+        // Ignore error if column already exists
+        if (err && !err.message.includes('duplicate column name')) {
+          console.error('Error adding twitter_username column:', err);
+        }
+      });
     });
   }
 
@@ -61,8 +72,8 @@ class Database {
   createUser(user: User): Promise<void> {
     return new Promise((resolve, reject) => {
       const stmt = this.db.prepare(`
-        INSERT INTO users (id, email, name, password, twitter_access_token, twitter_access_secret, nostr_private_key)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (id, email, name, password, twitter_access_token, twitter_access_secret, twitter_username, nostr_private_key)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       stmt.run([
@@ -72,6 +83,7 @@ class Database {
         user.password || null,
         user.twitterAccessToken || null,
         user.twitterAccessSecret || null,
+        user.twitterUsername || null,
         user.nostrPrivateKey || null
       ], function(err) {
         if (err) reject(err);
@@ -99,6 +111,7 @@ class Database {
               createdAt: new Date(row.created_at),
               twitterAccessToken: row.twitter_access_token,
               twitterAccessSecret: row.twitter_access_secret,
+              twitterUsername: row.twitter_username,
               nostrPrivateKey: row.nostr_private_key
             });
           }
@@ -124,6 +137,7 @@ class Database {
               createdAt: new Date(row.created_at),
               twitterAccessToken: row.twitter_access_token,
               twitterAccessSecret: row.twitter_access_secret,
+              twitterUsername: row.twitter_username,
               nostrPrivateKey: row.nostr_private_key
             });
           }
@@ -132,11 +146,11 @@ class Database {
     });
   }
 
-  updateUserTwitterTokens(userId: string, accessToken: string, accessSecret: string): Promise<void> {
+  updateUserTwitterTokens(userId: string, accessToken: string, accessSecret: string, username?: string): Promise<void> {
     return new Promise((resolve, reject) => {
       this.db.run(
-        'UPDATE users SET twitter_access_token = ?, twitter_access_secret = ? WHERE id = ?',
-        [accessToken, accessSecret, userId],
+        'UPDATE users SET twitter_access_token = ?, twitter_access_secret = ?, twitter_username = ? WHERE id = ?',
+        [accessToken, accessSecret, username || null, userId],
         function(err) {
           if (err) reject(err);
           else resolve();
@@ -162,7 +176,7 @@ class Database {
   disconnectUserTwitter(userId: string): Promise<void> {
     return new Promise((resolve, reject) => {
       this.db.run(
-        'UPDATE users SET twitter_access_token = NULL, twitter_access_secret = NULL WHERE id = ?',
+        'UPDATE users SET twitter_access_token = NULL, twitter_access_secret = NULL, twitter_username = NULL WHERE id = ?',
         [userId],
         function(err) {
           if (err) reject(err);
