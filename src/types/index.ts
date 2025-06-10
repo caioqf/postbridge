@@ -4,9 +4,9 @@ export interface User {
   name?: string;
   password?: string;
   createdAt: Date;
-  twitterAccessToken?: string;
-  twitterAccessSecret?: string;
-  twitterUsername?: string;
+  xAccessToken?: string;
+  xAccessSecret?: string;
+  xUsername?: string;
   nostrPrivateKey?: string;
 }
 

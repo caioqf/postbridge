@@ -13,7 +13,7 @@ import helmet from 'helmet';
 // Importa as rotas
 import authRoutes from './routes/auth';
 import postRoutes from './routes/posts';
-import twitterService from './services/twitter';
+import xService from './services/x';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -48,7 +48,7 @@ app.get('/', (req, res) => {
   res.json({
     name: 'PostBridge API',
     version: '1.0.0',
-    description: 'Plataforma de Postagens Simultâneas em X (Twitter) e Nostr',
+    description: 'Plataforma de Postagens Simultâneas em X e Nostr',
     endpoints: {
       health: 'GET /health',
       auth: {
@@ -99,7 +99,7 @@ app.use('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 PostBridge API rodando na porta ${PORT}`);
   console.log(`📖 Documentação: http://localhost:${PORT}/`);
-  console.log(`🔐 Twitter OAuth: ${twitterService.isTwitterConfigured() ? '✅ Configurado' : '❌ Não configurado'}`);
+  console.log(`🔐 X OAuth: ${xService.isXConfigured() ? '✅ Configurado' : '❌ Não configurado'}`);
   console.log(`🏥 Health check em http://localhost:${PORT}/health`);
 });
 

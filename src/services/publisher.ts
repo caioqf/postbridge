@@ -1,5 +1,5 @@
 import database from '../database';
-import twitterService from './twitter';
+import xService from './x';
 import nostrService from './nostr';
 import { User, Post, PublicationLog } from '../types';
 import { randomUUID } from 'crypto';
@@ -29,11 +29,11 @@ export async function publishPost(
   
   try {
     // Publica no X se o usuário tem credenciais
-    if (user.twitterAccessToken && user.twitterAccessSecret) {
+    if (user.xAccessToken && user.xAccessSecret) {
       try {
-        const xResult = await twitterService.publishTweet(
-          decrypt(user.twitterAccessToken),
-          decrypt(user.twitterAccessSecret),
+        const xResult = await xService.publishPost(
+          decrypt(user.xAccessToken),
+          decrypt(user.xAccessSecret),
           content,
           mediaUrls
         );
@@ -48,7 +48,7 @@ export async function publishPost(
           status: xResult.success ? 'success' : 'failed',
           error: xResult.error,
           publishedAt: new Date(),
-          platformPostId: xResult.tweetId
+          platformPostId: xResult.postId
         });
         
       } catch (error: any) {

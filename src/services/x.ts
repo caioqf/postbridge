@@ -1,27 +1,27 @@
 import { TwitterApi } from 'twitter-api-v2';
 import { XAuthTokens } from '../types';
 
-class TwitterService {
+class XService {
   private consumerKey: string;
   private consumerSecret: string;
   private callbackUrl: string;
   private isConfigured: boolean;
 
   constructor() {
-    this.consumerKey = process.env.TWITTER_CONSUMER_KEY || '';
-    this.consumerSecret = process.env.TWITTER_CONSUMER_SECRET || '';
-    this.callbackUrl = process.env.TWITTER_CALLBACK_URL || '';
+    this.consumerKey = process.env.X_CONSUMER_KEY || process.env.TWITTER_CONSUMER_KEY || '';
+    this.consumerSecret = process.env.X_CONSUMER_SECRET || process.env.TWITTER_CONSUMER_SECRET || '';
+    this.callbackUrl = process.env.X_CALLBACK_URL || process.env.TWITTER_CALLBACK_URL || '';
 
     this.isConfigured = !!(this.consumerKey && this.consumerSecret && this.callbackUrl);
 
     if (!this.isConfigured) {
-      console.warn('⚠️  Twitter API credentials not configured. Twitter features will be disabled.');
+      console.warn('⚠️  X API credentials not configured. X features will be disabled.');
     }
   }
 
   private checkConfiguration(): void {
     if (!this.isConfigured) {
-      throw new Error('Twitter API credentials not configured');
+      throw new Error('X API credentials not configured');
     }
   }
 
@@ -64,12 +64,12 @@ class TwitterService {
     };
   }
 
-  async publishTweet(
+  async publishPost(
     accessToken: string,
     accessSecret: string,
     content: string,
     mediaUrls?: string[]
-  ): Promise<{ success: boolean; tweetId?: string; error?: string }> {
+  ): Promise<{ success: boolean; postId?: string; error?: string }> {
     try {
       this.checkConfiguration();
       
@@ -80,16 +80,16 @@ class TwitterService {
         accessSecret,
       });
 
-      const tweet = await client.v2.tweet(content);
+      const post = await client.v2.tweet(content);
       
       return {
         success: true,
-        tweetId: tweet.data.id,
+        postId: post.data.id,
       };
     } catch (error: any) {
       return {
         success: false,
-        error: error.message || 'Failed to publish tweet',
+        error: error.message || 'Failed to publish post',
       };
     }
   }
@@ -129,14 +129,14 @@ class TwitterService {
         name: user.name
       };
     } catch (error) {
-      console.error('Error getting Twitter user info:', error);
+      console.error('Error getting X user info:', error);
       return null;
     }
   }
 
-  isTwitterConfigured(): boolean {
+  isXConfigured(): boolean {
     return this.isConfigured;
   }
 }
 
-export default new TwitterService(); 
+export default new XService(); 

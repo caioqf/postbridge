@@ -21,9 +21,9 @@ class Database {
           name TEXT,
           password TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          twitter_access_token TEXT,
-          twitter_access_secret TEXT,
-          twitter_username TEXT,
+          x_access_token TEXT,
+          x_access_secret TEXT,
+          x_username TEXT,
           nostr_private_key TEXT
         )
       `);
@@ -56,13 +56,53 @@ class Database {
         )
       `);
 
-      // Add twitter_username column if it doesn't exist (for existing databases)
+      // Migration: Rename twitter columns to x columns (for existing databases)
       this.db.run(`
-        ALTER TABLE users ADD COLUMN twitter_username TEXT
+        ALTER TABLE users RENAME COLUMN twitter_access_token TO x_access_token
       `, (err) => {
-        // Ignore error if column already exists
+        if (err && !err.message.includes('no such column') && !err.message.includes('duplicate column name')) {
+          console.error('Error renaming twitter_access_token column:', err);
+        }
+      });
+
+      this.db.run(`
+        ALTER TABLE users RENAME COLUMN twitter_access_secret TO x_access_secret
+      `, (err) => {
+        if (err && !err.message.includes('no such column') && !err.message.includes('duplicate column name')) {
+          console.error('Error renaming twitter_access_secret column:', err);
+        }
+      });
+
+      this.db.run(`
+        ALTER TABLE users RENAME COLUMN twitter_username TO x_username
+      `, (err) => {
+        if (err && !err.message.includes('no such column') && !err.message.includes('duplicate column name')) {
+          console.error('Error renaming twitter_username column:', err);
+        }
+      });
+
+      // Add x columns if they don't exist (fallback for new databases)
+      this.db.run(`
+        ALTER TABLE users ADD COLUMN x_access_token TEXT
+      `, (err) => {
         if (err && !err.message.includes('duplicate column name')) {
-          console.error('Error adding twitter_username column:', err);
+          // Ignore error if column already exists
+        }
+      });
+
+      this.db.run(`
+        ALTER TABLE users ADD COLUMN x_access_secret TEXT
+      `, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          // Ignore error if column already exists
+        }
+      });
+
+      this.db.run(`
+        ALTER TABLE users ADD COLUMN x_username TEXT
+      `, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          // Ignore error if column already exists
         }
       });
     });
@@ -72,7 +112,7 @@ class Database {
   createUser(user: User): Promise<void> {
     return new Promise((resolve, reject) => {
       const stmt = this.db.prepare(`
-        INSERT INTO users (id, email, name, password, twitter_access_token, twitter_access_secret, twitter_username, nostr_private_key)
+        INSERT INTO users (id, email, name, password, x_access_token, x_access_secret, x_username, nostr_private_key)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
@@ -81,9 +121,9 @@ class Database {
         user.email || null,
         user.name || null,
         user.password || null,
-        user.twitterAccessToken || null,
-        user.twitterAccessSecret || null,
-        user.twitterUsername || null,
+        user.xAccessToken || null,
+        user.xAccessSecret || null,
+        user.xUsername || null,
         user.nostrPrivateKey || null
       ], function(err) {
         if (err) reject(err);
@@ -109,9 +149,9 @@ class Database {
               name: row.name,
               password: row.password,
               createdAt: new Date(row.created_at),
-              twitterAccessToken: row.twitter_access_token,
-              twitterAccessSecret: row.twitter_access_secret,
-              twitterUsername: row.twitter_username,
+              xAccessToken: row.x_access_token,
+              xAccessSecret: row.x_access_secret,
+              xUsername: row.x_username,
               nostrPrivateKey: row.nostr_private_key
             });
           }
@@ -135,9 +175,9 @@ class Database {
               name: row.name,
               password: row.password,
               createdAt: new Date(row.created_at),
-              twitterAccessToken: row.twitter_access_token,
-              twitterAccessSecret: row.twitter_access_secret,
-              twitterUsername: row.twitter_username,
+              xAccessToken: row.x_access_token,
+              xAccessSecret: row.x_access_secret,
+              xUsername: row.x_username,
               nostrPrivateKey: row.nostr_private_key
             });
           }
@@ -146,10 +186,10 @@ class Database {
     });
   }
 
-  updateUserTwitterTokens(userId: string, accessToken: string, accessSecret: string, username?: string): Promise<void> {
+  updateUserXTokens(userId: string, accessToken: string, accessSecret: string, username?: string): Promise<void> {
     return new Promise((resolve, reject) => {
       this.db.run(
-        'UPDATE users SET twitter_access_token = ?, twitter_access_secret = ?, twitter_username = ? WHERE id = ?',
+        'UPDATE users SET x_access_token = ?, x_access_secret = ?, x_username = ? WHERE id = ?',
         [accessToken, accessSecret, username || null, userId],
         function(err) {
           if (err) reject(err);
@@ -173,10 +213,10 @@ class Database {
   }
 
   // Disconnect platform methods
-  disconnectUserTwitter(userId: string): Promise<void> {
+  disconnectUserX(userId: string): Promise<void> {
     return new Promise((resolve, reject) => {
       this.db.run(
-        'UPDATE users SET twitter_access_token = NULL, twitter_access_secret = NULL, twitter_username = NULL WHERE id = ?',
+        'UPDATE users SET x_access_token = NULL, x_access_secret = NULL, x_username = NULL WHERE id = ?',
         [userId],
         function(err) {
           if (err) reject(err);

@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { randomUUID } from 'crypto';
 import database from '../database';
-import twitterService from '../services/twitter';
+import xService from '../services/x';
 import nostrService from '../services/nostr';
 import { generateToken, authenticateToken, AuthRequest } from '../middleware/auth';
 import { encrypt, decrypt } from '../utils/crypto';
@@ -10,8 +10,8 @@ import bcrypt from 'bcrypt';
 
 const router = Router();
 
-// Armazena temporariamente os tokens OAuth do Twitter
-const tempTwitterTokens = new Map<string, { oauthToken: string; oauthTokenSecret: string; userId?: string }>();
+// Armazena temporariamente os tokens OAuth do X
+const tempXTokens = new Map<string, { oauthToken: string; oauthTokenSecret: string; userId?: string }>();
 
 // Registro no PostBridge
 router.post('/register', async (req: Request, res: Response) => {
@@ -94,9 +94,9 @@ router.post('/login', async (req: Request, res: Response) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        twitterUsername: user.twitterUsername,
+        xUsername: user.xUsername,
         connectedPlatforms: {
-          x: !!(user.twitterAccessToken && user.twitterAccessSecret),
+          x: !!(user.xAccessToken && user.xAccessSecret),
           nostr: !!user.nostrPrivateKey
         }
       },
@@ -140,17 +140,17 @@ router.post('/connect/x', authenticateToken, async (req: AuthRequest, res: Respo
   try {
     const userId = req.userId!;
 
-    if (!twitterService.isTwitterConfigured()) {
+    if (!xService.isXConfigured()) {
       return res.status(400).json({ 
         error: 'X API credentials not configured',
-        details: 'Check TWITTER_CONSUMER_KEY and TWITTER_CONSUMER_SECRET in .env'
+        details: 'Check X_CONSUMER_KEY and X_CONSUMER_SECRET in .env'
       });
     }
 
-    const { url, oauthToken, oauthTokenSecret } = await twitterService.getAuthUrl();
+    const { url, oauthToken, oauthTokenSecret } = await xService.getAuthUrl();
     
     // Armazena temporariamente os tokens com referência ao userId
-    tempTwitterTokens.set(oauthToken, { 
+    tempXTokens.set(oauthToken, { 
       oauthToken, 
       oauthTokenSecret,
       userId
@@ -158,7 +158,7 @@ router.post('/connect/x', authenticateToken, async (req: AuthRequest, res: Respo
     
     // Remove após 10 minutos
     setTimeout(() => {
-      tempTwitterTokens.delete(oauthToken);
+      tempXTokens.delete(oauthToken);
     }, 10 * 60 * 1000);
 
     res.json({
@@ -184,7 +184,7 @@ router.get('/x/callback', async (req: Request, res: Response) => {
     }
 
     // Busca os tokens temporários usando oauth_token
-    const tempTokens = tempTwitterTokens.get(oauth_token as string);
+    const tempTokens = tempXTokens.get(oauth_token as string);
     
     if (!tempTokens) {
       console.log('❌ Sessão não encontrada para oauth_token:', oauth_token);
@@ -197,7 +197,7 @@ router.get('/x/callback', async (req: Request, res: Response) => {
     console.log('✅ Tokens temporários encontrados, trocando por access tokens...');
 
     // Troca por tokens de acesso
-    const { accessToken, accessSecret } = await twitterService.getAccessTokens(
+    const { accessToken, accessSecret } = await xService.getAccessTokens(
       tempTokens.oauthToken,
       tempTokens.oauthTokenSecret,
       oauth_verifier as string
@@ -206,12 +206,12 @@ router.get('/x/callback', async (req: Request, res: Response) => {
     console.log('✅ Access tokens obtidos com sucesso');
 
     // Fetch user info to get username
-    const userInfo = await twitterService.getUserInfo(accessToken, accessSecret);
+    const userInfo = await xService.getUserInfo(accessToken, accessSecret);
     console.log('✅ Informações do usuário X obtidas:', userInfo?.username);
 
     // Atualiza usuário existente
     if (tempTokens.userId) {
-      await database.updateUserTwitterTokens(
+      await database.updateUserXTokens(
         tempTokens.userId,
         encrypt(accessToken),
         encrypt(accessSecret),
@@ -221,7 +221,7 @@ router.get('/x/callback', async (req: Request, res: Response) => {
     }
 
     // Limpa tokens temporários
-    tempTwitterTokens.delete(oauth_token as string);
+    tempXTokens.delete(oauth_token as string);
 
     res.json({
       success: true,
@@ -264,10 +264,10 @@ router.get('/status', authenticateToken, async (req: AuthRequest, res: Response)
         name: user.name
       },
       connectedPlatforms: {
-        x: !!(user.twitterAccessToken && user.twitterAccessSecret),
+        x: !!(user.xAccessToken && user.xAccessSecret),
         nostr: !!user.nostrPrivateKey
       },
-      twitterUsername: user.twitterUsername,
+      xUsername: user.xUsername,
       nostrPublicKey
     });
   } catch (error: any) {
@@ -281,7 +281,7 @@ router.post('/disconnect/x', authenticateToken, async (req: AuthRequest, res: Re
     const userId = req.userId!;
 
     // Remove os tokens do X do usuário
-    await database.disconnectUserTwitter(userId);
+    await database.disconnectUserX(userId);
 
     res.json({
       success: true,

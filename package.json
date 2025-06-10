@@ -1,7 +1,7 @@
 {
   "name": "postbridge",
   "version": "1.0.0",
-  "description": "PostBridge - Plataforma de Postagens Simultâneas em X (Twitter) e Nostr",
+  "description": "PostBridge - Plataforma de Postagens Simultâneas em X e Nostr",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
